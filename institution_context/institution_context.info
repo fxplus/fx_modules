@@ -1,0 +1,4 @@
+name = Institutional Context
+description = Allows hiding / revealing of FU vs UoE content based on session variable
+package = Falmouth
+core = 7.x

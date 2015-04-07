@@ -1,0 +1,5 @@
+name = FX glue
+description = Miscellaneous (minor) FX plus custom alterations
+package = tombola
+dependencies[] = book
+core = 7.x

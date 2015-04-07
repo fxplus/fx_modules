@@ -1,0 +1,268 @@
+<?php
+/**
+ * @file
+ * Remove Duplicate Nodes.
+ *
+ * Originally from http://drupal.org/node/720190 by prabhakarsun
+ * Based on a sample from Robert Douglass.
+ * http://robshouse.net/blog-post/remove-duplicate-nodes-dedupe-based-title
+ *
+ * Updated to order by nid (Keep the first, delete any later ones)
+ * Then rewritten entirely to shift the brocessing into multiple batches
+ * for LARGE jobs.
+ *
+ * Even with batching, it's possible to fail to even enumerate high numbers.
+ * if so, reduce the
+ * TODO, see if scaling is a problem - if it needs to be moved into a batch job.
+ * Right now, you can just retry on failure and eventually get through.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function dedupe_menu() {
+  $items['admin/content/dedupe'] = array(
+    'title' => 'Dedupe',
+    'description' => 'Delete Duplicate Nodes',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('dedupe_content_command'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Build form for starting the deduplication process.
+ * A FAPI form definition.
+ */
+function dedupe_content_command($form, &$form_state) {
+  $options = node_type_get_names();
+  $form['dedupe_node_types'] = array(
+    '#type' => 'select',
+    '#title' => t('You can select content type from which duplicates are removed.'),
+    '#options' => $options,
+    '#default_value' => variable_get('dedupe_node_types', ''),
+    '#description' => t('Duplicate content from the selected content types will be deleted.'),
+  );
+  $form['dedupe_dry_run'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Dry run'),
+    '#default_value' => variable_get('dedupe_dry_run', TRUE),
+    '#description' => t('Just scan and provide a report on duplicates. Uncheck this to actually do it.'),
+  );
+  $options = array(0, 1, 2, 4, 8, 16, 32, 64, 128, 256);
+  $options = array_combine($options, $options);
+  $form['dedupe_limit'] = array(
+    '#type' => 'select',
+    '#title' => t('Limit'),
+    '#options' => $options,
+    '#default_value' => variable_get('dedupe_limit', 1),
+    '#description' => t('Only do this many unique titles at a time. Use this (repeatedly) if you have problems with thousands of results. This limits the "titles", and each title may have a number of clones that needs deleting, so the actual process will run over (this limit)x(number of duplicates). 0 means no limit. Limiting the number of titles processed can also be handy for testing.'),
+  );
+  $form['dedupe_taxonomy'] = array(
+    '#type' =>
+    'checkbox', 
+    '#default_value' => variable_get('dedupe_taxonomy', TRUE),
+    '#title' => t('Collate taxonomy terms'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Dedupe'),
+  );
+  return $form;
+}
+
+/**
+ * Handle form submission, start the process.
+ */
+function dedupe_content_command_submit($form, $form_state) {
+  foreach (array('dedupe_node_types', 'dedupe_dry_run', 'dedupe_limit', 'dedupe_taxonomy') as $var) {
+    if (isset($form_state['values'][$var])) {
+      variable_set($var, $form_state['values'][$var]);
+    }
+  }
+  $type = $form_state['values']['dedupe_node_types'];
+  $count = dedupe_delete($type, $form_state['values']['dedupe_dry_run'], $form_state['values']['dedupe_limit'], $form_state['values']['dedupe_taxonomy']);
+
+  $message = t('Queued %count titles that need duplicates removed from content type %type', array('%count' => $count, '%type' => $type));
+  drupal_set_message($message);
+}
+
+/**
+ * Delete duplicates from selected content type, based on title.
+ *
+ * For serious scaling, doing two lookups in smaller chunks
+ * - first identify titles with dupes,
+ * - then remove their respective clones,
+ * in separate loops.
+ *
+ * Even that needed help to scale safely, so the process that finds clones
+ * is a batch job too.
+ */
+function dedupe_delete($type, $dry_run = TRUE, $limit = 0, $tax_collate = TRUE) {
+  $count = 0;
+  $previous = array();
+
+  // Find titles that occur more than once.
+  
+  /*
+   $sql = "
+  SELECT title FROM {node}
+  WHERE type = '%s'
+  GROUP BY BINARY title HAVING count(*) > 1
+  ";
+  */
+  $query = db_select('node', 'n')
+  ->fields('n', array('title'))
+  ->condition('type', $type)
+  ->groupBy('title')
+  ->having('count(*) > 1');
+  ;
+  
+  if ($limit && is_numeric($limit)) {
+    $query->range(NULL, $limit);
+    // $sql .= " LIMIT " . $limit;
+  }
+
+  // Set up a batch to deal with each title string individually.
+  $operations = array();
+  // TODO Please convert this statement to the D7 database API syntax.
+  $result = $query->execute();
+  foreach ($result as $dupe) {
+    $title = $dupe->title;
+    $operations[] = array('dedupe_queue_deletions', array($title, $dry_run, $tax_collate));
+    $count++;
+  }
+  
+  if (!empty($operations)) {
+    // Start the batch.
+    $batch = array(
+      'title' => t('Queuing Duplicate Deletions'),
+      'operations' => $operations,
+    );
+    batch_set($batch);
+  }
+
+  return $count;
+}
+
+/**
+ * Given a title, find all matches and start to delete all but one.
+ *
+ * A callback for the batch operation.
+ *
+ * @param string $title
+ *   Node title.
+ * @param bool $dry_run
+ *   If set, don't really delete it.
+ * @param array $context
+ *   Batch context.
+ */
+function dedupe_queue_deletions($title, $dry_run = TRUE, $tax_collate = TRUE, &$context = array()) {
+
+  // Gotcha. MySQL '=' operator is case-insentive and trims whitespace
+  // Which in our case is different enough to worry about.
+  // http://orange-pants.com/databases/mysql-trailing-whitespace-problem/
+  // Using 'LIKE' didn't help.
+  // Instead use the BINARY keyword and get an actual exact match.
+  //
+  /*
+    $sql2 = "
+    SELECT nid, title FROM {node}
+    WHERE BINARY title = '%s'
+    ORDER BY nid ASC";
+   */
+  
+  $query = db_select('node', 'n')
+  ->fields('n', array('nid', 'title'))
+  //->join('taxonomy_index', 'ti', 'n.nid = ti.nid')
+  ->condition('title', $title, "=")
+  ->orderBy('nid', 'ASC')
+  ;
+  
+  $result2 = $query->execute();
+  #$result2 = db_query($sql2, $title);
+  
+  // Pop the first one. Keep it safe.
+  $original = $result2->fetch();
+
+  $link = 'node/' . $original->nid;
+  $message = t('Queueing the deletion of all nodes that duplicate %title !original', array('%title' => $title, '!original' => l($link, $link)));
+  watchdog('dedupe', $message);
+  $context['message'] = $message;
+
+  $operations = array();
+  while ($row = $result2->fetch()) {
+    $orig_link = 'node/' . $original->nid;
+    $dupe_link = 'node/' . $row->nid;
+    $strings = array(
+      '!orig' => l($orig_link . ' ' . $original->title, $orig_link),
+      '!dupe' => l($dupe_link, $dupe_link),
+    );
+
+    // This double-check should be pointless, but it was a gotcha.
+    if ($row->title == $title) {
+      if ($tax_collate) {
+        $operations[] = array('dedupe_collate_terms', array($row->nid, $original->nid));
+      }
+      if (! $dry_run) {
+        $operations[] = array('dedupe_node_delete_callback', array($row->nid, $row->title));
+      }
+      else {
+        drupal_set_message(t('Should delete !dupe as it looks like a clone of !orig', $strings));
+      }
+      $count++;
+    }
+    else {
+      // This got triggered when comparing
+      // "Arethusa Reserve"
+      // "Arethusa reserve "
+      // And that's not identical enough to call a definite duplicate
+      // - check it manually.
+      drupal_set_message(t("Not an exact title match between '!dupe' '!orig' - huh? Was close, but I'll leave it to you to sort this out.", $strings));
+    }
+  }
+
+  if (!empty($operations)) {
+    // Start the batch.
+    $batch = array(
+      'title' => t('Deleting %count Duplicates', array('%count' => count($operations))),
+      'operations' => $operations,
+    );
+    batch_set($batch);
+  }
+  return $count;
+}
+
+
+/**
+ * Callback for the batch operation.
+ * A stub around node_delete, Only to give us a better progress message.
+ *
+ * FECK. dedupe_node_delete unwitingly became a hook callback in D7.
+ * RENAMED to dedupe_node_delete_callback.
+ *
+ * @param int $nid
+ *   Node ID.
+ * @param string $title
+ *   Node title.
+ * @param array $context
+ *   Batch context.
+ */
+function dedupe_node_delete_callback($nid, $title, &$context) {
+  $context['message'] = t('Now processing %node', array('%node' => $title . ' ' . $nid));
+  node_delete($nid);
+  return TRUE;
+}
+
+function dedupe_collate_terms($nid, $original_nid) {
+  // assign terms from duplicates to 'original' node
+  db_update('taxonomy_index')
+    ->fields(array(
+      'nid' => $original_nid,
+    ))
+    ->condition('nid', $nid, '=')
+    ->execute();
+  return TRUE;
+}

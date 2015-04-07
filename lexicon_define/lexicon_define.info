@@ -1,0 +1,6 @@
+name = "lexicon_define"
+description = redirect lexicon 'glossary' taxonomy terms to in-site definition
+package = FU Custom
+core = 7.x
+dependencies[] = lexicon
+

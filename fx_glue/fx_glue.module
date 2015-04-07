@@ -1,0 +1,289 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function fx_glue_menu() {
+  $items['admin/resource/empty/%/edit'] = array(
+    'title' => 'Edit next subject area without subject_area',
+    // Machine name of the menu in which the link should appear.
+    //'menu_name' => 'primary-links',
+    'page callback' => '_fx_glue_empty_resource',
+    'page arguments' => array(3),
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+// todo: complete this functionality
+// may not be high priority as conceived for subject area term, which currently overlaps subject
+function _fx_glue_empty_resource($vid = NULL) {
+  dpm($vid);
+  // find a single node that does not
+  $query = "SELECT n.nid FROM node AS n
+            WHERE n.type = 'resource' 
+            AND n.nid NOT IN (
+              SELECT ti.nid FROM taxonomy_index AS ti 
+              JOIN taxonomy_term_data AS td ON ti.tid = td.tid 
+              WHERE td.vid = $vid
+            )
+            LIMIT 0, 1";
+  $result = db_query($query, array());
+  foreach ($result as $record) {
+    dpm($record);
+  }
+  $output = 'hello';
+  return $output;
+}
+
+function fx_glue_node_view($node, $view_mode) {
+  $links = array();
+  /**
+   * Adds relevant book links to the node's links.
+   * 
+   * This is necessary because book module only adds them to 
+   * 'full' view mode, so do not appear on DS nodes (doh!)
+   * 
+   *  see book.module ~94 & ~892 
+   */
+  $nolink = array('teaser', 'thumb_teaser');
+  $dolink = array();
+  if ($view_mode != 'full' && !in_array($view_mode, $nolink)) {
+    book_node_view($node, 'full'); // lie to book module
+  }
+  /**
+    * redirects resource to page where it is described on site
+    * intended to give better context - similar to lexicon_define.module
+    * which does the same for glossary terms
+    *
+    * possibly intermittently breaking ajax term reference and some batch
+    * operations (eg dedupe) cannot reliably duplicate
+    */
+  if (isset($node->field_related['und']) && $node->type == 'resource' && $view_mode == 'full') {
+      drupal_goto('node/'.$node->field_related['und'][0]['target_id'], array(), 301);
+  }
+  if (isset($node->field_tags['und']) && is_array($node->field_tags['und'])) {
+    // dpm($variables);
+    foreach($node->field_tags['und'] as $term)  {
+      if ($term['tid'] == '12') {
+        // this is an faq node
+        // dpm($node->book['mlid']);
+          // store faq menu id in drupa js
+        drupal_add_js(array('fx_book_mlid' => $node->book['mlid']), 'setting');
+        //drupal_add_js(array('myModule' => array('key' => 'value')), 'setting');
+        // add showhide function to page
+        drupal_add_js(drupal_get_path('module', 'fx_glue') .'/fx_glue_admin.js');
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_permission()
+ */
+function fx_glue_permission() {
+  $perms['bulk replace terms'] = array('title' => t('Replace existing terms in bulk edit (danger)'));
+  return $perms;
+}
+
+
+
+/**
+ * Implements hook_block_info().
+ */
+function fx_glue_block_info() {
+  $blocks['show_hide_admin'] = array(
+    'info' => t('show or hide admin stuff'),
+    'region' => 'footer',  // Not usually provided.
+  );
+  $blocks['contact_author'] = array(
+    'info' => t('Contact author of page'),
+  );
+  return $blocks;
+}
+/**
+ * Implements hook_block_view().
+ */
+function fx_glue_block_view($delta = '') {
+  switch ($delta) {
+    case 'show_hide_admin':
+      $block['subject'] = t('test');
+      $block['content'] = fx_glue_contents($delta);
+      break;
+    case 'contact_author':
+      $block['subject'] = t('Contact author');
+      $block['content'] = fx_glue_contents($delta);
+      break;
+  }
+  return $block;
+}
+
+/**
+ * A module-defined block content function.
+ */
+function fx_glue_contents($which_block) {
+  switch ($which_block) {
+    case 'show_hide_admin':
+      fx_showhide_javascript();
+
+      $content = array();
+      $content[] = '<span id="admin-hide">hide</span>';
+      $content[] = '<span id="admin-show">show</span>';
+      $content = theme('item_list', array('items' => $content));
+
+      return array('#markup' => $content);
+
+    case 'contact_author':
+      $object = menu_get_object();
+      $content = 'author contact not found';
+      // dpm($object);
+      if (isset($object->type)) {
+        $author_uid = $object->uid;
+      } elseif (arg(0) == 'taxonomy') {
+        $tid = arg(2);
+        $gettermauthor = "SELECT entity_id FROM field_revision_field_subject WHERE entity_type = 'user' AND field_subject_tid = $tid";
+        foreach(db_query($gettermauthor) as $author){
+          $author_uid = $author->entity_id;
+        }
+      }
+      if (isset($author_uid)) {
+        $author = user_load($author_uid);
+        $path = current_path();
+        $url= url($path, array('absolute' => TRUE));
+        $authorname = $author->field_name['und'][0]['given'].' '.$author->field_name['und'][0]['family'];
+        $content = l(
+          "contact $authorname",
+          'contact-author',
+          array(
+            'query' => array('author' => $author->mail, 'url' => $url)
+          )
+        );
+        $content .= "<p>(author of this page)</p>";
+      }
+      return array('#markup' => $content);
+  } 
+}
+
+/**
+* Implements hook_filter_info().
+*/
+function fx_glue_filter_info() {
+  $filters = array();
+  $filters['glue_clearfloat'] = array(
+    'title' => t('Use --- to clear images'),
+    'process callback' => '_glue_clearfloat',
+  );
+  return $filters;
+}
+
+/** 
+* Filter callback for our doggone filter.
+*/
+function _glue_clearfloat($text, $filter, $format, $langcode, $cache, $cache_id) {
+  return str_ireplace('---', '<span class="clearfix"></span>', $text);
+}
+
+function fx_showhide_javascript() {
+  // elements that should be hidden/shown
+  $admin_elements = array(
+      '.admin-element',
+      '.nav-tabs',
+      '#block-views-critical-comments-block-1',
+      '#admin-menu-wrapper',
+      '.field-name-field-old-url',
+      '.form-item-journal-entry',
+    );
+  $admin_elements = array('admin_elements' => implode(',', $admin_elements));
+  // store names of admin elements in drupal js
+  drupal_add_js(array('fx_glue' => $admin_elements), 'setting');
+  //drupal_add_js(array('myModule' => array('key' => 'value')), 'setting');
+  // add create cookie code and showhide function to page
+  drupal_add_js(drupal_get_path('module', 'fx_glue') .'/fx_glue_admin.js');
+}
+
+
+function fx_glue_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'user_login' && !user_is_logged_in()) {
+    drupal_set_message('This site no longer shares your IT password, apologies for any inconvenience');
+    drupal_set_message('If you have not yet done so please '.l('request a new password', 'user/password'));
+  }
+
+  //'resource_node_form';
+  //dpm($form_id);
+  //dpm($form);
+  if (strpos($form_id, 'views_form_manage_resources_page_5') !== FALSE && isset($form['bundle_resource'])) {
+    unset($form['bundle_resource']['#fieldgroups']);
+    unset($form['bundle_resource']['#group_children']);
+    $form['bundle_resource']['_append::field_subject_area']['#default_value'] = 1;
+    $form['bundle_resource']['_append::field_subject']['#default_value'] = 1;
+    if (!user_access('bulk replace terms')) {
+      $form['bundle_resource']['_append::field_subject_area']['#attributes']['disabled'] = TRUE;
+      $form['bundle_resource']['_append::field_subject']['#attributes']['disabled'] = TRUE;
+    }
+  }
+  
+
+  /*// copy save/edit to top of node edit page (usability)
+  // Is it a node add/edit form?
+  if (drupal_substr($form_id, -10) == '_node_form') {
+    if(!empty($form['actions'])) {
+      foreach($form['actions'] as $name => $button) {
+        $form["$name-copy"] = $button;
+        $form["$name-copy"]['#weight'] = -999;
+      } // end foreach
+    }
+  }*/
+}
+
+/**
+* Simple wrapper function for drupal_mail() to avoid extraneous code.
+*/
+function fx_glue_send_email($from = 'default_from', $to, $subject, $message) {
+  $my_module = 'fx_glue';
+  $my_mail_token = microtime();
+  if ($from == 'default_from') {
+    // Change this to your own default 'from' email address.
+    $from = variable_get('system_mail', 'Library digital <digital@fxplus.ac.uk>');
+  }
+  $message = array(
+    'id' => $my_module . '_' . $my_mail_token,
+    'to' => $to,
+    'subject' => $subject,
+    'body' => array($message),
+    'headers' => array(
+      'From' => $from, 
+      'Sender' => $from, 
+      'Return-Path' => $from,
+    ),
+  );
+  $system = drupal_mail_system($my_module, $my_mail_token);
+  $message = $system->format($message);
+  if ($system->mail($message)) {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+
+/*
+ * Implements hook_node_update
+ * after a node is saved, clear boost cache for that page
+ * relies on boost setting 'check database timestamps'
+function fx_glue_node_update($node) {}
+  // code taken from boost hook_cron (https://drupal.org/node/583264)
+    // Remove expired files from the cache.
+    global $_boost;
+    // This was not invoked in hook_init because of the quick check to
+    // avoid caching requests from the CLI
+    $_boost = boost_transform_url();
+    if (isset($_boost['base_dir']) && variable_get('boost_expire_cron', BOOST_EXPIRE_CRON)) {
+      $count = _boost_rmdir($_boost['base_dir'], FALSE);
+      watchdog('boost', 'Expired %count stale files from static page cache.', array('%count' => $count), WATCHDOG_NOTICE);
+    }
+    drupal_set_message('boost cache cleared');
+    watchdog('fx_glue', 'boost cache cleared for node '.$node->nid.'?');
+  // end of boost code
+}
+*/

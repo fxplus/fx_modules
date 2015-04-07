@@ -1,0 +1,5 @@
+name = Permanently alter HTML of page to filtered content when saved
+description = Permanently alter the saved content of the body field to it's filtered version when saved. Intended for use while migrating content which might have unneccessary markup (that would be revealed if filter is changed)
+package = Development
+core = 7.x
+

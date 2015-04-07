@@ -1,0 +1,29 @@
+<?php
+/**
+ * @file
+ * Module file for lexicon_define.
+ */
+
+/* 
+ * Implements hook_trigger_info
+ */
+function lexicon_define_trigger_info() {
+  return array(
+    'taxonomy' => array(
+      'taxonomy_term_view' => array(
+        'label' => t('When view taxonomy term'),
+      ),
+    ),
+  );
+}
+
+/* 
+ * Implements hook_taxonomy_term_view
+ */
+function lexicon_define_taxonomy_term_view($term, $view_mode, $langcode) {
+  // if viewing a taxonomy/term/ page in full view mode
+  // and a preferred in-site location exists, redirect permanently
+  if (arg(1) == 'term' && $view_mode == 'full' && isset($term->field_related['und'])) {
+    drupal_goto('node/'.$term->field_related['und'][0]['target_id'], array(), 301);
+  }
+}

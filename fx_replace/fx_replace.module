@@ -1,0 +1,105 @@
+<?php
+/**
+* Implements hook_filter_info().
+*/
+function fx_replace_filter_info() {
+  $filters = array();
+  $filters['fxreplace_ucf'] = array(
+    'title' => t('Replace University College Falmouth'),
+    'process callback' => '_fx_replace_ucf',
+  );
+  $filters['fxreplace_insert_onestop'] = array(
+    'title' => t('Insert One Stop Search form'),
+    'process callback' => '_fx_insert_onestop',
+  );
+  return $filters;
+}
+
+/** 
+* Filter callback for our doggone filter.
+*/
+function _fx_replace_ucf($text, $filter, $format, $langcode, $cache, $cache_id) {
+  $text = str_ireplace('University College Falmouth', 'Falmouth University', $text);
+  $text = str_ireplace('UCF', 'Falmouth University', $text);
+  return $text;
+}
+function _fx_insert_onestop($text, $filter, $format, $langcode, $cache, $cache_id) {
+  return str_ireplace('[[one stop search]]', _onestop_embed(), $text);
+}
+
+function fx_replace_workbench_content_alter(&$variables) {
+    $variables['workbench_current_user']['#attributes']['class'] = array('span3');
+    $variables['workbench_edited']['#attributes']['class'] = array('span8');
+    $variables['workbench_recent_content']['#attributes']['class'] = array('span12');
+}
+
+function _onestop_embed() {
+  //return 'onestop searchbox';
+  $style = '<style>.summon-search-box .summon-search-field { margin-bottom: 0;} </style>';
+  return $style._summon_searchbox('advanced');
+}
+
+function _summon_searchbox($version = 'NULL') {
+
+
+  switch ($version) {
+  case 'advanced':
+    return '
+      <script type="text/javascript" id="s6fcafc608e2001304e8300237dd8628a" src="http://falmouth.summon.serialssolutions.com/widgets/box.js"></script>
+      <script type="text/javascript">
+          new SummonCustomSearchBox({
+              "id": "#s6fcafc608e2001304e8300237dd8628a",
+              "params": {
+                  "s.fvf[]": ["ContentType,Newspaper Article,t", "ContentType,Book Review,t"],
+                  "keep_r": true
+              },
+              "colors": {},
+              "tagline_text": " ",
+              "searchbutton_text": "Search",
+              "advanced_text": "Advanced Search",
+              "boxwidth_text": "400",
+              "advanced": "true",
+              "suggest": "true",
+              "tagline": "true",
+              "popup": "true"
+          })
+      </script>';
+      break;
+  case 'html': // created using tool @ http://gvsulib.com/labs/custom_summon/
+    return '
+      <!-- Start of Custom Summon Search code -->
+      <form method="GET" action="http://falmouth.summon.serialssolutions.com/search">
+      <input type="text" name="s.q" />
+      <input type="hidden" name="s.fvf[]" value="ContentType,Research Guide," />
+      <input type="hidden" name="s.fvf[]" value="ContentType,Audio Recording," />
+      <input type="hidden" name="s.fvf[]" value="ContentType,Video Recording," />
+      <input type="hidden" name="s.fvf[]" value="ContentType,Music Score," />
+      <input type="hidden" name="s.fvf[]" value="ContentType,Journal Article," />
+      <input type="hidden" name="s.fvf[]" value="ContentType,Trade Publication Article," />
+      <input type="hidden" name="s.fvf[]" value="ContentType,Conference Proceeding," />
+      <input type="hidden" name="s.fvf[]" value="ContentType,Book / eBook," />
+      <input type="hidden" name="spellcheck" value="true" />
+      <input type="hidden" name="keep_r" value="true"/>
+      <input type="submit" value="Search" />
+      </form>
+      <!-- End of Custom Summon Search code -->';
+
+  default:
+    return '
+      <script type="text/javascript" id="s140ecbe061910130150400237dd8743a" src="http://falmouth.summon.serialssolutions.com/widgets/box.js"></script>
+      <script type="text/javascript">
+          new SummonCustomSearchBox({
+              "id": "#s140ecbe061910130150400237dd8743a",
+              "params": {},
+              "colors": {},
+              "tagline_text": "Search all library resources *",
+              "searchbutton_text": "Search",
+              "advanced_text": "search options",
+              "placeholder_text": "Enter keywords",
+              "boxwidth_text": "200",
+              "suggest": "true",
+              "popup": false
+          })
+      </script>';
+  }
+}

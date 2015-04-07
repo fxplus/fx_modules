@@ -1,0 +1,5 @@
+name = CKEditor Config
+description = "This module allows you to prevent CKEditor from turning quotation marks into &amp;quot; entities"
+package = "Input filters"
+dependencies[] = wysiwyg
+core = 7.x

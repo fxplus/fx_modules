@@ -1,0 +1,6 @@
+name = "oldsite_redirect"
+description = redirect old site paths (query from bookmarklet) to the new location based on 'Old URL' field value
+package = tombola
+core = 7.x
+
+

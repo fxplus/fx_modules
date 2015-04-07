@@ -1,0 +1,28 @@
+<?php
+/**
+ * Implements hook_menu().
+ */
+function institution_context_menu() {
+  $items['cxt'] = array(
+    'title' => 'Exeter Context',
+    'page callback' => '_inst_context',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'expanded' => TRUE,
+  );
+  return $items;
+}
+
+function _inst_context($inst = FALSE) {
+  // $_SESSION['institution'] = $inst;
+  user_cookie_save(array('institution'=>$inst));
+  drupal_goto('<front>');
+}
+
+
+
+/*
+function institution_context_form_alter(&$form, &$form_state, $form_id){
+  dpm($form_id);
+}
+*/

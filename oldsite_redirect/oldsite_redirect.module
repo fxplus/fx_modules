@@ -1,0 +1,161 @@
+<?php
+/**
+ * @file
+ * Module file for oldsite_redirect.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function oldsite_redirect_menu() {
+
+  $items['oldsite'] = array(
+    'title' => 'Redirection page for old URLS',
+    'page callback' => '_oldsite_redirection',
+    'page arguments' => array(),
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+/**
+ * Page callback for the simplest introduction menu entry.
+ *
+ * @param $content
+ *   Some content passed in.
+ */
+function _oldsite_redirection($message = NULL) {
+
+  // The .htaccess rewrites field 
+  $query = drupal_get_query_parameters();
+  $path = $query['path'];
+  $path_relative = str_replace('http://library.falmouth.ac.uk/', '', $path);
+  $referrer = $query['ref'];
+  // TODO abstract entity type from goto path, add oldsite field to terms and users
+  // special case for subject area as subjects are terms and currently do not redirect 
+  // (path contructed as node/*)
+  if ($path_relative == '/' || $path_relative == '') {
+    // report outdated homepage link
+    _oldsite_report($path, $referrer, '<front>', FALSE);
+    drupal_goto('<front>', array(), 301);
+  }
+  _oldsite_newsite($path_relative, $referrer);
+  _oldsite_special_cases($path, $referrer);
+  //_oldsite_subjectarea($path, $referrer);
+
+  // now all the anonmalies are taken care of, look for equivalents for standard oldsite paths in db
+  // old paths started with page number, so use this to filter requests for theme files etc
+  // every version on the old site had a different path (!) so need to abstract path from id
+    $titlepathonly = preg_replace("#http://library.falmouth.ac.uk/[0-9]+/#", '' , $path);
+    $results = db_select('field_data_field_old_url', 'entity_id')
+      ->fields('entity_id')
+      ->condition('field_old_url_url', '%'.$titlepathonly,'LIKE')
+      ->execute();
+        /* every url seperately
+        $results = db_select('field_data_field_old_url', 'entity_id')
+          ->fields('entity_id')
+          ->condition('field_old_url_url',$path,'=')
+          ->execute();
+        */
+
+    $newpages = array();
+    while ($record = $results->fetchAssoc()) {
+      $newpages[] = $record;
+    }
+    if ($newpages) {
+      // multiple urls?
+      if (count($newpages) > 1) {
+        $message[] .= "<p>The content of this page has been split between several pages on the new site:</p><ul>";
+        foreach($newpages as $page) {
+          $node = node_load($page['entity_id']);
+          $message[] .= "<li>". l($node->title, 'node/'. $node->nid) ."</li>";
+        }
+        $message[] .= "</ul>";
+        $message[] .= "<br /><p><em>Previous URL: ". $path ."</em></p>";
+
+        return implode('', $message);
+      } else {
+        //drupal_set_message('This webpage is the intended replacement for the content at '.  $path);
+        drupal_goto('node/'. $newpages[0]['entity_id'], array(), 301);
+      }
+    } else {
+      drupal_set_message('<p>Unfortunately the link you have used was taken from our old website, and we are unable to find the appropriate page<br/>
+        ('.$path.')</p>
+        <p>Please try searching (below) for the information you need, or visit the <a href="/">homepage</a> and explore</p>', 'warning');
+      _oldsite_report($path, $referrer, NULL, FALSE);
+      //define('MENU_NOT_FOUND', 2);
+      drupal_goto('search', array(), 301);
+      // TODO - return 404 page instead of 301
+    }
+  //}
+}
+
+function _oldsite_special_cases($path, $referrer) {
+  $special_cases = array(
+      'homepage.asp' => '<front>',
+      'default.asp' => '<front>',
+      'static.asp' => '<front>',
+      'subject-resources-exeter' => 'library/subjects',
+      'study-support/subject-resources' => 'library/subjects',
+      'ac.uk/archives' => 'node/25071',
+      'current-journals' => 'node/25111',
+      'falmouth-resources/journal-databases' => 'resources/list/resourcetype/journal-databases',
+    );
+  foreach ($special_cases as $case => $redirect) {
+    if (strpos($path, $case) !== FALSE) { 
+      _oldsite_report($path, $referrer, $redirect, FALSE);
+      drupal_goto($redirect, array(), 301);
+    }
+  }
+}
+
+// no longer in use
+function _oldsite_subjectarea($path, $referrer) {
+  if (strpos($path, 'subject-resources-exeter') === FALSE) { return NULL; }
+  $destination = 'library/subjects';
+  _oldsite_report($path, $referrer, $destination, FALSE);
+  drupal_goto($destination, array(), 301);
+}
+
+function _oldsite_newsite($path, $referrer) {
+  // for some reason some new site urls are arrived at with domain (?)
+  if (drupal_lookup_path('source', $path)) {
+    _oldsite_report($path, $referrer, NULL, FALSE);
+    drupal_goto($path, array(), 301);
+  }
+
+}
+
+function _oldsite_report($path, $referrer, $destination = NULL, $email_notify=1) {
+        //$message = $path.' has no replacement on the new website';
+      //fx_glue_send_email('default_from', 'thomas.readings@fxplus.ac.uk', 'webpage without replacement', $message);
+      // disable email notification
+      if (!$destination) { $email_notify = NULL; }
+      if ($email_notify) {
+        $message = 'requested: '. $path. '<br/> from: ' .$referrer. '<br/><br/> redirected to: ' .$destination;
+        fx_glue_send_email('default_from', 'thomas.readings@fxplus.ac.uk', '#missinglibwebpage', $message);
+      }
+      $id = db_insert('fxplus_report_oldsite_requests') // Table name no longer needs {}
+      ->fields(array(
+        'timestamp' => REQUEST_TIME,
+        'url' => $path,
+        'referrer' => $referrer,
+        'redirect' => $destination,
+      ))
+      ->execute();
+}
+
+function _unused_example() {
+  $query = db_select('node', 'n');
+  $query->join('users', 'u', 'n.uid = u.uid'); //JOIN node with users
+  $query->groupBy('u.uid');//GROUP BY user ID
+  $query->fields('n',array('title','created'))//SELECT the fields from node
+      ->fields('u',array('name'))//SELECT the fields from user
+      ->orderBy('created', 'DESC')//ORDER BY created
+      ->range(0,2);//LIMIT to 2 records
+  $result = $query->execute();
+  while(
+      $record = $result->fetchAssoc()) {
+      print_r($record);
+  }
+}

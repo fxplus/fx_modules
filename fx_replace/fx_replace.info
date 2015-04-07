@@ -1,0 +1,5 @@
+name = FX replace
+description = Replaces University College Falmouth with Falmouth University in filtered content.
+package = "Input filters"
+dependencies[] = filter
+core = 7.x

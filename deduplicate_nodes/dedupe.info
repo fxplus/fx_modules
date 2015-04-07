@@ -1,0 +1,5 @@
+name = Dedupe
+description = "Node dedupe module taken from http://drupal.org/node/720190"
+core = 7.x
+package = Sparks
+

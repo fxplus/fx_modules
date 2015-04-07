@@ -1,0 +1,17 @@
+<?php
+/* Implements hook_node_presave */
+function apply_filter_node_presave($node) {
+  if ($node->type == 'page' && isset($node->body['und'][0])) {
+    $filtered = check_markup($node->body['und'][0]['value'], $node->body['und'][0]['format']);
+    if ($node->body['und'][0]['value'] != $filtered) {
+      if (user_access('access devel information')) {
+        dpm('Apply_filter module has permanently converted:');
+        dpm($node->body['und'][0]['value']);
+        dpm('to');
+        dpm($filtered);
+        dpm('based on the '.$node->body['und'][0]['format'].' filter');
+      }
+      $node->body['und'][0]['value'] = $filtered;
+    }
+  }
+}
