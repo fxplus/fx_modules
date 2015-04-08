@@ -3,7 +3,20 @@
  * @file
  * Module file for plus_search_simple2.
  */
-/*
+
+
+function plus_search_simple2_menu(){
+    return array(
+        'admin/build/something' => array(
+            'title' => 'Example Admin Form',
+            'description' => 'Admin form introduced by the MODULENAME module',
+            'type' => MENU_NORMAL_ITEM,
+            'page callback' => 'drupal_get_form',
+            'access arguments' => array('access administration pages'),
+        ),
+    );
+
+
 /**
  * Implements hook_block_info().
  */
