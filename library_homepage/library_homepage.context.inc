@@ -15,7 +15,7 @@ function library_homepage_context_default_contexts() {
   $context->api_version = 3;
   $context->name = 'homepage_content';
   $context->description = 'The site home page';
-  $context->tag = 'Resourceful';
+  $context->tag = 'Presentation';
   $context->conditions = array(
     'path' => array(
       'values' => array(
@@ -26,23 +26,23 @@ function library_homepage_context_default_contexts() {
   $context->reactions = array(
     'block' => array(
       'blocks' => array(
-        'plus_search_simple-form' => array(
-          'module' => 'plus_search_simple',
+        'fx_searchblock-form' => array(
+          'module' => 'fx_searchblock',
           'delta' => 'form',
           'region' => 'main_top',
-          'weight' => '-45',
+          'weight' => '-10',
         ),
         'menu-menu-quick-links' => array(
           'module' => 'menu',
           'delta' => 'menu-quick-links',
           'region' => 'main_top',
-          'weight' => '-44',
+          'weight' => '-9',
         ),
         'menu-menu-home-actions' => array(
           'module' => 'menu',
           'delta' => 'menu-home-actions',
           'region' => 'main_top',
-          'weight' => '-43',
+          'weight' => '-8',
         ),
         'system-main' => array(
           'module' => 'system',
@@ -63,7 +63,7 @@ function library_homepage_context_default_contexts() {
 
   // Translatables
   // Included for use with string extractors like potx.
-  t('Resourceful');
+  t('Presentation');
   t('The site home page');
   $export['homepage_content'] = $context;
 
