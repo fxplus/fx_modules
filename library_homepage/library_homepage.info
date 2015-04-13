@@ -18,4 +18,6 @@ features[features_api][] = api:1
 features[menu_custom][] = menu-home-actions
 features[menu_custom][] = menu-quick-links
 features[variable][] = contextual_block_class
-mtime = 1428939123
+features[variable][] = fx_searchblock_menu_name
+features[variable][] = fx_searchblock_menu_on
+mtime = 1428940532
