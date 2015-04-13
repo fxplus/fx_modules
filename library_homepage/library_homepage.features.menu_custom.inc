@@ -22,11 +22,19 @@ function library_homepage_menu_default_menu_custom() {
     'title' => 'Quick Links',
     'description' => 'quick links for homepage - criteria to be defined',
   );
+  // Exported menu: menu-search-options.
+  $menus['menu-search-options'] = array(
+    'menu_name' => 'menu-search-options',
+    'title' => 'Search Options',
+    'description' => 'Alternative search options',
+  );
   // Translatables
   // Included for use with string extractors like potx.
+  t('Alternative search options');
   t('Home Actions');
   t('Key links to be displayed on home page');
   t('Quick Links');
+  t('Search Options');
   t('quick links for homepage - criteria to be defined');
 
 
