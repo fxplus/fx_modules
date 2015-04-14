@@ -53,7 +53,13 @@ function library_homepage_context_default_contexts() {
         'views-news_feed-block' => array(
           'module' => 'views',
           'delta' => 'news_feed-block',
-          'region' => 'sidebar_second',
+          'region' => 'content',
+          'weight' => '-10',
+        ),
+        'views-news_feed-block_4' => array(
+          'module' => 'views',
+          'delta' => 'news_feed-block_4',
+          'region' => 'content_col3-3',
           'weight' => '-10',
         ),
       ),
