@@ -537,9 +537,28 @@ function library_homepage_views_default_views() {
 
   /* Display: Headline */
   $handler = $view->new_display('block', 'Headline', 'block_4');
+  $handler->display->display_options['defaults']['title'] = FALSE;
   $handler->display->display_options['defaults']['pager'] = FALSE;
   $handler->display->display_options['pager']['type'] = 'some';
   $handler->display->display_options['pager']['options']['items_per_page'] = '5';
+  $handler->display->display_options['defaults']['header'] = FALSE;
+  /* Header: Global: Unfiltered text */
+  $handler->display->display_options['header']['area_text_custom']['id'] = 'area_text_custom';
+  $handler->display->display_options['header']['area_text_custom']['table'] = 'views';
+  $handler->display->display_options['header']['area_text_custom']['field'] = 'area_text_custom';
+  $handler->display->display_options['header']['area_text_custom']['empty'] = TRUE;
+  $handler->display->display_options['header']['area_text_custom']['content'] = '<div class="inline social-media">
+<h2 class="pull-left">News</h2>
+<div class="pull-left">
+  
+ <a href="https://twitter.com/FXLibrary" class="twitter" data-tooltip="the library on twitter"></a>
+<a href="https://www.facebook.com/pages/FXLibrary/459458947501173" class="facebook" data-tooltip="library facebook page"></a>
+<a href="http://www.pinterest.com/tremough/" class="pinterest" data-tooltip="penryn campus pinterest"></a>
+<a href="http://www.pinterest.com/tremough/" class="pinterest" data-tooltip="falmouth campus pinterest"></a>
+</div>
+
+<span class="clearfix"></span>
+</div>';
   $handler->display->display_options['block_description'] = 'Library Headlines';
   $export['news_feed'] = $view;
 
