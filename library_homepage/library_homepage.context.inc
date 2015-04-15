@@ -56,6 +56,18 @@ function library_homepage_context_default_contexts() {
           'region' => 'content',
           'weight' => '-10',
         ),
+        'views-front_page_features-block_1' => array(
+          'module' => 'views',
+          'delta' => 'front_page_features-block_1',
+          'region' => 'content_col3-1',
+          'weight' => '-10',
+        ),
+        'views-front_page_features-block_2' => array(
+          'module' => 'views',
+          'delta' => 'front_page_features-block_2',
+          'region' => 'content_col3-2',
+          'weight' => '-10',
+        ),
         'views-news_feed-block_4' => array(
           'module' => 'views',
           'delta' => 'news_feed-block_4',
