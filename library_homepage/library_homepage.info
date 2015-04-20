@@ -24,4 +24,4 @@ features[variable][] = fx_searchblock_menu_name
 features[variable][] = fx_searchblock_menu_on
 features[views_view][] = front_page_features
 features[views_view][] = news_feed
-mtime = 1429114378
+mtime = 1429198785
