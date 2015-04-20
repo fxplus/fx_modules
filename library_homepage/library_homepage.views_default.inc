@@ -681,7 +681,7 @@ function library_homepage_views_default_views() {
  <a href="https://twitter.com/FXLibrary" class="twitter" data-tooltip="the library on twitter"></a>
 <a href="https://www.facebook.com/pages/FXLibrary/459458947501173" class="facebook" data-tooltip="library facebook page"></a>
 <a href="http://www.pinterest.com/tremough/" class="pinterest" data-tooltip="penryn campus pinterest"></a>
-<a href="http://www.pinterest.com/tremough/" class="pinterest" data-tooltip="falmouth campus pinterest"></a>
+<a href="https://www.pinterest.com/librarysocialme" class="pinterest" data-tooltip="falmouth campus pinterest"></a>
 </div>
 
 <span class="clearfix"></span>
