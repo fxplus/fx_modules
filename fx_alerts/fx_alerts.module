@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the FX Alerts feature.
+ */
+
+include_once 'fx_alerts.features.inc';
