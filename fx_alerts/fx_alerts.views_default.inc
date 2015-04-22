@@ -25,6 +25,7 @@ function fx_alerts_views_default_views() {
   $handler->display->display_options['title'] = 'Manage Alerts';
   $handler->display->display_options['use_more_always'] = FALSE;
   $handler->display->display_options['access']['type'] = 'perm';
+  $handler->display->display_options['access']['perm'] = 'administer user alert';
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
@@ -274,7 +275,7 @@ function fx_alerts_views_default_views() {
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
-  $handler->display->display_options['path'] = 'admin/content/alerts';
+  $handler->display->display_options['path'] = 'admin/alerts';
   $handler->display->display_options['menu']['type'] = 'normal';
   $handler->display->display_options['menu']['title'] = 'Alerts';
   $handler->display->display_options['menu']['description'] = 'Administer site alerts';

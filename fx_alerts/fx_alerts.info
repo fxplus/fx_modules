@@ -23,4 +23,4 @@ features[field][] = node-user_alert-field_message
 features[variable][] = user_alert_cron_delete
 features[variable][] = user_alert_label
 features[views_view][] = manage_alerts
-mtime = 1429718515
+mtime = 1429718944
