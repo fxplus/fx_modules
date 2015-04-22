@@ -53,7 +53,7 @@ function fx_alerts_field_default_fields() {
           'module' => 'text',
           'settings' => array(),
           'type' => 'text_default',
-          'weight' => 4,
+          'weight' => 8,
         ),
         'teaser' => array(
           'label' => 'hidden',
@@ -62,7 +62,7 @@ function fx_alerts_field_default_fields() {
             'trim_length' => 600,
           ),
           'type' => 'text_summary_or_trimmed',
-          'weight' => 1,
+          'weight' => 8,
         ),
       ),
       'ds_extras_field_template' => '',
@@ -84,7 +84,7 @@ function fx_alerts_field_default_fields() {
           'summary_rows' => 5,
         ),
         'type' => 'text_textarea_with_summary',
-        'weight' => '1',
+        'weight' => '8',
       ),
     ),
   );
@@ -157,7 +157,7 @@ function fx_alerts_field_default_fields() {
         'module' => 'options',
         'settings' => array(),
         'type' => 'options_select',
-        'weight' => '8',
+        'weight' => '2',
       ),
     ),
   );
@@ -205,7 +205,7 @@ function fx_alerts_field_default_fields() {
           'module' => 'text',
           'settings' => array(),
           'type' => 'text_default',
-          'weight' => 3,
+          'weight' => 1,
         ),
         'teaser' => array(
           'label' => 'above',
@@ -235,7 +235,7 @@ function fx_alerts_field_default_fields() {
           'size' => '60',
         ),
         'type' => 'text_textfield',
-        'weight' => '2',
+        'weight' => '1',
       ),
     ),
   );
