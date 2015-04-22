@@ -84,7 +84,80 @@ function fx_alerts_field_default_fields() {
           'summary_rows' => 5,
         ),
         'type' => 'text_textarea_with_summary',
-        'weight' => 31,
+        'weight' => '31',
+      ),
+    ),
+  );
+
+  // Exported field: 'node-user_alert-field_importance'.
+  $fields['node-user_alert-field_importance'] = array(
+    'field_config' => array(
+      'active' => '1',
+      'cardinality' => '1',
+      'deleted' => '0',
+      'entity_types' => array(),
+      'field_name' => 'field_importance',
+      'field_permissions' => array(
+        'type' => '0',
+      ),
+      'foreign keys' => array(),
+      'indexes' => array(
+        'value' => array(
+          0 => 'value',
+        ),
+      ),
+      'locked' => '0',
+      'module' => 'list',
+      'settings' => array(
+        'allowed_values' => array(
+          'info' => 'Information',
+          'warning' => 'Warning',
+          'alert' => 'Alert',
+        ),
+        'allowed_values_function' => '',
+      ),
+      'translatable' => '0',
+      'type' => 'list_text',
+    ),
+    'field_instance' => array(
+      'bundle' => 'user_alert',
+      'default_value' => array(
+        0 => array(
+          'value' => 'alert',
+        ),
+      ),
+      'deleted' => '0',
+      'description' => '',
+      'display' => array(
+        'default' => array(
+          'label' => 'above',
+          'module' => 'list',
+          'settings' => array(),
+          'type' => 'list_default',
+          'weight' => 2,
+        ),
+        'teaser' => array(
+          'label' => 'above',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 0,
+        ),
+      ),
+      'ds_extras_field_template' => '',
+      'entity_type' => 'node',
+      'fences_wrapper' => 'div',
+      'field_name' => 'field_importance',
+      'label' => 'Importance',
+      'required' => 0,
+      'settings' => array(
+        'user_register_form' => FALSE,
+      ),
+      'widget' => array(
+        'active' => 1,
+        'module' => 'options',
+        'settings' => array(),
+        'type' => 'options_select',
+        'weight' => '43',
       ),
     ),
   );
@@ -93,6 +166,7 @@ function fx_alerts_field_default_fields() {
   // Included for use with string extractors like potx.
   t('Alert message');
   t('An alert message you would like to display to all users of the website');
+  t('Importance');
 
   return $fields;
 }
